@@ -56,6 +56,7 @@ type mergeCommand struct {
 	sourceLanguage languageTag
 	outdir         string
 	format         string
+	crowdin        bool
 }
 
 func (mc *mergeCommand) name() string {
@@ -69,6 +70,7 @@ func (mc *mergeCommand) parse(args []string) error {
 	flags.Var(&mc.sourceLanguage, "sourceLanguage", "en")
 	flags.StringVar(&mc.outdir, "outdir", ".", "")
 	flags.StringVar(&mc.format, "format", "toml", "")
+	flags.BoolVar(&mc.crowdin, "crowdin", false, "")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -89,7 +91,7 @@ func (mc *mergeCommand) execute() error {
 		}
 		inFiles[path] = content
 	}
-	ops, err := merge(inFiles, mc.sourceLanguage.Tag(), mc.outdir, mc.format)
+	ops, err := merge(inFiles, mc.sourceLanguage.Tag(), mc.outdir, mc.format, mc.crowdin)
 	if err != nil {
 		return err
 	}
@@ -110,7 +112,7 @@ type fileSystemOp struct {
 	deleteFiles []string
 }
 
-func merge(messageFiles map[string][]byte, sourceLanguageTag language.Tag, outdir, outputFormat string) (*fileSystemOp, error) {
+func merge(messageFiles map[string][]byte, sourceLanguageTag language.Tag, outdir, outputFormat string, crowdin bool) (*fileSystemOp, error) {
 	unmerged := make(map[language.Tag][]map[string]*i18n.MessageTemplate)
 	sourceMessageTemplates := make(map[string]*i18n.MessageTemplate)
 	unmarshalFuncs := map[string]i18n.UnmarshalFunc{
@@ -119,7 +121,7 @@ func merge(messageFiles map[string][]byte, sourceLanguageTag language.Tag, outdi
 		"yaml": yaml.Unmarshal,
 	}
 	for path, content := range messageFiles {
-		mf, err := i18n.ParseMessageFileBytes(content, path, unmarshalFuncs)
+		mf, err := i18n.ParseMessageFileBytes(content, path, unmarshalFuncs, crowdin)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load message file %s: %s", path, err)
 		}
@@ -231,7 +233,7 @@ func merge(messageFiles map[string][]byte, sourceLanguageTag language.Tag, outdi
 
 	writeFiles := make(map[string][]byte, len(translate)+len(active))
 	for langTag, messageTemplates := range translate {
-		path, content, err := writeFile(outdir, "translate", langTag, outputFormat, messageTemplates, false)
+		path, content, err := writeFile(outdir, "translate", langTag, outputFormat, messageTemplates, false, crowdin)
 		if err != nil {
 			return nil, err
 		}
@@ -239,7 +241,7 @@ func merge(messageFiles map[string][]byte, sourceLanguageTag language.Tag, outdi
 	}
 	deleteFiles := []string{}
 	for langTag, messageTemplates := range active {
-		path, content, err := writeFile(outdir, "active", langTag, outputFormat, messageTemplates, langTag == sourceLanguageTag)
+		path, content, err := writeFile(outdir, "active", langTag, outputFormat, messageTemplates, langTag == sourceLanguageTag, crowdin)
 		if err != nil {
 			return nil, err
 		}

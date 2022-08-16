@@ -73,7 +73,24 @@ func (b *Bundle) MustLoadMessageFile(path string) {
 //
 // The language tag of the file is everything after the second to last "." or after the last path separator, but before the format.
 func (b *Bundle) ParseMessageFileBytes(buf []byte, path string) (*MessageFile, error) {
-	messageFile, err := ParseMessageFileBytes(buf, path, b.unmarshalFuncs)
+	messageFile, err := ParseMessageFileBytes(buf, path, b.unmarshalFuncs, false)
+	if err != nil {
+		return nil, err
+	}
+	if err := b.AddMessages(messageFile.Tag, messageFile.Messages...); err != nil {
+		return nil, err
+	}
+	return messageFile, nil
+}
+
+
+// ParseMessageCrowdinFileBytes parses the bytes in buf to add translations to the bundle in the crowdin format.
+//
+// The format of the file is everything after the last ".".
+//
+// The language tag of the file is everything after the second to last "." or after the last path separator, but before the format.
+func (b *Bundle) ParseMessageCrowdinFileBytes(buf []byte, path string) (*MessageFile, error) {
+	messageFile, err := ParseMessageFileBytes(buf, path, b.unmarshalFuncs, true)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +104,14 @@ func (b *Bundle) ParseMessageFileBytes(buf []byte, path string) (*MessageFile, e
 // except it panics if an error happens.
 func (b *Bundle) MustParseMessageFileBytes(buf []byte, path string) {
 	if _, err := b.ParseMessageFileBytes(buf, path); err != nil {
+		panic(err)
+	}
+}
+
+// MustParseMessageCrowdinFileBytes is similar to ParseMessageCrowdinFileBytes
+// except it panics if an error happens.
+func (b *Bundle) MustParseMessageCrowdinFileBytes(buf []byte, path string) {
+	if _, err := b.ParseMessageCrowdinFileBytes(buf, path); err != nil {
 		panic(err)
 	}
 }

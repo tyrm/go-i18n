@@ -46,6 +46,7 @@ type extractCommand struct {
 	sourceLanguage languageTag
 	outdir         string
 	format         string
+	crowdin        bool
 }
 
 func (ec *extractCommand) name() string {
@@ -59,6 +60,7 @@ func (ec *extractCommand) parse(args []string) error {
 	flags.Var(&ec.sourceLanguage, "sourceLanguage", "en")
 	flags.StringVar(&ec.outdir, "outdir", ".", "")
 	flags.StringVar(&ec.format, "format", "toml", "")
+	flags.BoolVar(&ec.crowdin, "crowdin", false, "")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -109,7 +111,7 @@ func (ec *extractCommand) execute() error {
 			messageTemplates[m.ID] = mt
 		}
 	}
-	path, content, err := writeFile(ec.outdir, "active", ec.sourceLanguage.Tag(), ec.format, messageTemplates, true)
+	path, content, err := writeFile(ec.outdir, "active", ec.sourceLanguage.Tag(), ec.format, messageTemplates, true, ec.crowdin)
 	if err != nil {
 		return err
 	}

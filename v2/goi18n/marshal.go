@@ -13,8 +13,20 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func writeFile(outdir, label string, langTag language.Tag, format string, messageTemplates map[string]*i18n.MessageTemplate, sourceLanguage bool) (path string, content []byte, err error) {
-	v := marshalValue(messageTemplates, sourceLanguage)
+func writeFile(outdir, label string, langTag language.Tag, format string, messageTemplates map[string]*i18n.MessageTemplate, sourceLanguage, crowdin bool) (path string, content []byte, err error) {
+	var v interface{}
+
+	switch {
+	case format == "toml":
+		v = marshalValue(messageTemplates, sourceLanguage)
+	case format == "json":
+		v = marshalValue(messageTemplates, sourceLanguage)
+	case format == "yaml" && crowdin:
+		v = marshalCrowdinValue(langTag, messageTemplates, sourceLanguage)
+	case format == "yaml" && !crowdin:
+		v = marshalValue(messageTemplates, sourceLanguage)
+	}
+
 	content, err = marshal(v, format)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to marshal %s strings to %s: %s", langTag, format, err)
@@ -44,6 +56,10 @@ func marshalValue(messageTemplates map[string]*i18n.MessageTemplate, sourceLangu
 		}
 	}
 	return v
+}
+
+func marshalCrowdinValue(langTag language.Tag, messageTemplates map[string]*i18n.MessageTemplate, sourceLanguage bool) interface{} {
+	return map[string]interface{}{langTag.String(): marshalValue(messageTemplates, sourceLanguage)}
 }
 
 func marshal(v interface{}, format string) ([]byte, error) {

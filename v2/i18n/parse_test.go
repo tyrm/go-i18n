@@ -159,7 +159,7 @@ outer:
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			actual, err := ParseMessageFileBytes([]byte(testCase.file), testCase.path, testCase.unmarshalFuncs)
+			actual, err := ParseMessageFileBytes([]byte(testCase.file), testCase.path, testCase.unmarshalFuncs, false)
 			if (err == nil && testCase.err != nil) ||
 				(err != nil && testCase.err == nil) ||
 				(err != nil && testCase.err != nil && err.Error() != testCase.err.Error()) {

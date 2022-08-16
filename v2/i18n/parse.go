@@ -18,7 +18,7 @@ type MessageFile struct {
 }
 
 // ParseMessageFileBytes returns the messages parsed from file.
-func ParseMessageFileBytes(buf []byte, path string, unmarshalFuncs map[string]UnmarshalFunc) (*MessageFile, error) {
+func ParseMessageFileBytes(buf []byte, path string, unmarshalFuncs map[string]UnmarshalFunc, crowdin bool) (*MessageFile, error) {
 	lang, format := parsePath(path)
 	tag := language.Make(lang)
 	messageFile := &MessageFile{
@@ -41,6 +41,25 @@ func ParseMessageFileBytes(buf []byte, path string, unmarshalFuncs map[string]Un
 	var raw interface{}
 	if err = unmarshalFunc(buf, &raw); err != nil {
 		return nil, err
+	}
+
+	if crowdin {
+		switch data := raw.(type) {
+		case map[string]interface{}:
+			rawSub, ok := data[tag.String()]
+			if !ok {
+				return nil, fmt.Errorf("file is not in crowdin format: %T is missing language key", raw)
+			}
+			raw = rawSub
+		case map[interface{}]interface{}:
+			rawSub, ok := data[tag.String()]
+			if !ok {
+				return nil, fmt.Errorf("file is not in crowdin format: %T is missing language key", raw)
+			}
+			raw = rawSub
+		default:
+			return nil, fmt.Errorf("file is not in crowdin format: unknown type %T", raw)
+		}
 	}
 
 	if messageFile.Messages, err = recGetMessages(raw, isMessage(raw), true); err != nil {
